@@ -80,5 +80,17 @@ Route::middleware(['auth','student'])->group(function () {
     )->name('student.my-courses');
 });
 
+Route::middleware('auth')->group(function () {
+
+    Route::get('/courses/{course}/chat', 
+        [\App\Http\Controllers\CourseChatController::class, 'fetch']
+    );
+
+    Route::post('/courses/{course}/chat', 
+        [\App\Http\Controllers\CourseChatController::class, 'send']
+    );
+
+});
+
 
 require __DIR__.'/auth.php';

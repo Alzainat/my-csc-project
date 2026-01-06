@@ -288,11 +288,17 @@
              class="flex-1 overflow-y-auto p-4 space-y-3 text-sm bg-gray-50">
         </div>
 
+        {{-- Typing Indicator --}}
+        <div id="typingIndicator"
+             class="px-4 pb-2 text-xs text-gray-500 hidden">
+        </div>
+
         {{-- Input --}}
         <form onsubmit="sendChatMessage(event)"
               class="p-3 border-t flex gap-2">
             <input id="chatInput"
-                   class="flex-1 border rounded px-3 py-2 text-sm"
+                   oninput="typing()"
+                   class="flex-1 border rounded px-3 py-2 text-sm text-black"
                    placeholder="Type a message...">
             <button
                 class="px-4 py-2 bg-indigo-600 text-white rounded text-sm">
@@ -354,47 +360,69 @@ function closeAddCourseModal() {
 }
 </script>
 <script>
+    console.log('Echo:', window.Echo);
+    const AUTH_USER_ID = {{ auth()->id() }};
+    const AUTH_USER_NAME = "{{ auth()->user()->name }}";
     let currentCourseId = null;
+    let chatChannel = null;
+    let typingTimer = null;
 
     function openChatModal(courseId) {
-        currentCourseId = courseId;
+        
+        if (chatChannel) {
+    window.Echo.leave(`course.${currentCourseId}`);
+    chatChannel = null;
+}
+currentCourseId = courseId;
 
-        document.getElementById('chatModal').classList.remove('hidden');
-        document.getElementById('chatModal').classList.add('flex');
+        const modal = document.getElementById('chatModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
 
-        loadChatMessages();
-    }
-
-    function closeChatModal() {
-        document.getElementById('chatModal').classList.add('hidden');
-        currentCourseId = null;
-    }
-
-    function loadChatMessages() {
-        fetch(`/courses/${currentCourseId}/chat`)
+        // 1️⃣ تحميل الرسائل القديمة
+        fetch(`/courses/${courseId}/chat`)
             .then(res => res.json())
             .then(messages => {
                 const box = document.getElementById('chatMessages');
                 box.innerHTML = '';
 
                 messages.forEach(msg => {
-                    const isMe = msg.user_id === {{ auth()->id() }};
-
-                    box.innerHTML += `
-                        <div class="${isMe ? 'text-right' : 'text-left'}">
-                            <p class="text-xs text-gray-500">
-                                ${msg.user.name}
-                            </p>
-                            <span class="inline-block px-3 py-2 rounded 
-                                ${isMe ? 'bg-indigo-600 text-black' : 'bg-white border'}">
-                                ${msg.message}
-                            </span>
-                        </div>
-                    `;
+                    appendMessage(msg, msg.user_id === AUTH_USER_ID);
                 });
 
                 box.scrollTop = box.scrollHeight;
-            });
+            })
+            .catch(err => console.error('Failed to load messages:', err));
+
+        // 2️⃣ الاشتراك بالقناة - هنا التعديل المهم
+        chatChannel = window.Echo.private(`course.${courseId}`)
+    .listen('.course.message', e => {
+        appendMessage(e.message, e.message.user_id === AUTH_USER_ID);
+        hideTyping();
+    })
+    .listenForWhisper('typing', e => {
+        if (e.user_id !== AUTH_USER_ID) {
+            showTyping(e.name);
+        }
+    });
+
+        console.log('Subscribed to channel:', `course.${courseId}`);
+    }
+
+    function closeChatModal() {
+        const modal = document.getElementById('chatModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+
+        if (chatChannel) {
+            window.Echo.leave(`course.${currentCourseId}`);
+            chatChannel = null;
+            console.log('Left channel');
+        }
+
+        currentCourseId = null;
+        hideTyping();
+        document.getElementById('chatInput').value = '';
     }
 
     function sendChatMessage(event) {
@@ -402,21 +430,115 @@ function closeAddCourseModal() {
 
         const input = document.getElementById('chatInput');
         const message = input.value.trim();
+        
+        if (!message || !currentCourseId) return;
 
-        if (!message) return;
+        
 
         fetch(`/courses/${currentCourseId}/chat`, {
             method: 'POST',
             headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json'
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({ message })
         })
-        .then(() => {
+        .then(res => {
+            if (!res.ok) throw new Error('Failed to send message');
+            return res.json();
+        })
+        .then(msg => {
+            console.log('Message sent successfully:', msg);
             input.value = '';
-            loadChatMessages();
+            hideTyping();
+        })
+        .catch(err => {
+            console.error('Send message error:', err);
+            alert('Failed to send message');
         });
     }
+
+    function appendMessage(msg, mine) {
+        const box = document.getElementById('chatMessages');
+        
+        // تأكد إنه الرسالة مش موجودة مسبقاً
+        const existingMsg = box.querySelector(`[data-msg-id="${msg.id}"]`);
+        if (existingMsg) return;
+
+        const div = document.createElement('div');
+        div.setAttribute('data-msg-id', msg.id);
+        div.className = mine ? 'text-right' : 'text-left';
+        
+        const userName = mine ? 'You' : (msg.user?.name || 'Unknown');
+        
+        div.innerHTML = `
+            <p class="text-xs text-gray-500 mb-1">
+                ${userName}
+            </p>
+            <span class="inline-block px-3 py-2 rounded text-sm
+                ${mine ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200'}">
+                ${escapeHtml(msg.message)}
+            </span>
+        `;
+
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ===== Typing Indicator =====
+    function typing() {
+    if (!chatChannel) return;
+
+    chatChannel.whisper('typing', {
+        user_id: AUTH_USER_ID,
+        name: AUTH_USER_NAME
+    });
+
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(hideTyping, 2500);
+}
+
+    function showTyping(name) {
+    const el = document.getElementById('typingIndicator');
+    el.textContent = `${name} is typing...`;
+    el.classList.remove('hidden');
+}
+
+    function hideTyping() {
+        const el = document.getElementById('typingIndicator');
+        el.classList.add('hidden');
+        el.textContent = '';
+    }
+
+    // عند تحميل الصفحة - تأكد من وجود Echo
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof Echo === 'undefined') {
+            console.error('Laravel Echo is not loaded!');
+        } else {
+            console.log('Laravel Echo is ready');
+        }
+    });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const userId = {{ auth()->id() }};
+
+    Echo.private(`App.Models.User.${userId}`)
+        .notification((notification) => {
+            console.log('🔔 Notification received:', notification);
+
+            // مثال عرض
+            alert(notification.message);
+
+            // أو badge / toast لاحقًا
+        });
+});
 </script>
 </x-app-layout>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\CourseMessageSent;
 use App\Models\Course;
 use Illuminate\Http\Request;
 
@@ -22,15 +23,18 @@ class CourseChatController extends Controller
         $this->authorizeCourse($course);
 
         $request->validate([
-            'message' => 'required|string'
+            'message' => 'required|string|max:2000'
         ]);
 
-        $course->messages()->create([
+        $message = $course->messages()->create([
             'user_id' => auth()->id(),
             'message' => $request->message,
-        ]);
+        ])->load('user');
 
-        return response()->json(['success' => true]);
+        // 🔥 بثّ الرسالة فورًا
+        broadcast(new CourseMessageSent($message))->toOthers();
+
+        return response()->json($message);
     }
 
     private function authorizeCourse(Course $course)
@@ -42,14 +46,12 @@ class CourseChatController extends Controller
             return;
         }
 
-        // Student approved بالكورس
+        // Student approved
         $isApprovedStudent = $course->students()
             ->wherePivot('status', 'approved')
             ->where('users.id', $user->id)
             ->exists();
 
-        if (! $isApprovedStudent) {
-            abort(403);
-        }
+        abort_unless($isApprovedStudent, 403);
     }
 }

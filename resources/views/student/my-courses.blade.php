@@ -66,14 +66,47 @@
 
 <script>
 let currentCourseId = null;
+const AUTH_USER_ID = {{ auth()->id() }};
+let chatChannel = null;
 
 function openChatModal(courseId) {
+
+    
+    if (chatChannel && currentCourseId) {
+        window.Echo.leave(`course.${currentCourseId}`);
+        chatChannel = null;
+    }
+
+    
     currentCourseId = courseId;
 
     document.getElementById('chatModal').classList.remove('hidden');
     document.getElementById('chatModal').classList.add('flex');
 
     loadChatMessages();
+
+    // ✅ اشتراك realtime
+    chatChannel = window.Echo.private(`course.${courseId}`)
+        .listen('.course.message', e => {
+            if (e.message.user_id !== AUTH_USER_ID) {
+                appendStudentMessage(e.message);
+            }
+        });
+}
+
+function appendStudentMessage(msg) {
+    const box = document.getElementById('chatMessages');
+
+    box.innerHTML += `
+        <div>
+            <p class="text-xs text-gray-500">${msg.user.name}</p>
+            <span class="inline-block px-3 py-1 rounded bg-white border">
+                ${msg.message}
+            </span>
+        </div>
+    `;
+
+    box.scrollTop = box.scrollHeight;
 }
 
 function closeChatModal() {
@@ -111,6 +144,11 @@ function sendChatMessage(e) {
     const message = input.value.trim();
     if (!message) return;
 
+    appendStudentMessage({
+        user: { name: 'You' },
+        message: message
+    });
+
     fetch(`/courses/${currentCourseId}/chat`, {
         method: 'POST',
         headers: {
@@ -120,7 +158,6 @@ function sendChatMessage(e) {
         body: JSON.stringify({ message })
     }).then(() => {
         input.value = '';
-        loadChatMessages();
     });
 }
 </script>
