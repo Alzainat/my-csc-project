@@ -1,11 +1,11 @@
 <x-app-layout>
-    <div class="flex min-h-screen bg-gray-100">
+    <div class="flex min-h-screen bg-[#f8f9fa]">
 
         {{-- ================= Sidebar ================= --}}
-        <aside class="w-52 bg-white shadow">
-            <div class="p-6 border-b">
-                <h2 class="text-xl font-bold text-gray-800">Teacher Panel</h2>
-                <p class="text-sm text-gray-500">{{ auth()->user()->name }}</p>
+        <aside class="w-52 bg-[#004d8c] text-white shadow">
+            <div class="p-6 border-b border-white/20">
+                <h2 class="text-xl font-bold">Teacher Panel</h2>
+                <p class="text-sm text-white/70">{{ auth()->user()->name }}</p>
             </div>
 
             <nav class="p-4 space-y-2">
@@ -32,28 +32,30 @@
         </aside>
 
         {{-- ================= Main Content ================= --}}
-        <main class="flex-1 p-6 space-y-8 bg-gray-50">
+        <main class="flex-1 p-6 space-y-8 bg-[#f8f9fa]">
 
             {{-- ===== Dashboard Overview ===== --}}
             <section id="overview" class="dashboard-section">
-                <h2 class="text-2xl font-bold mb-6">Overview</h2>
+                <h2 class="text-2xl font-bold mb-6 text-[#004d8c]">
+                    Overview
+                </h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 rounded shadow">
+                    <div class="bg-white p-6 rounded-xl shadow">
                         <p class="text-gray-500 text-sm">My Courses</p>
-                        <p class="text-3xl font-bold">
+                        <p class="text-3xl font-bold text-[#004d8c]">
                             {{ $courses->count() }}
                         </p>
                     </div>
 
-                    <div class="bg-white p-6 rounded shadow">
+                    <div class="bg-white p-6 rounded-xl shadow">
                         <p class="text-gray-500 text-sm">Pending Requests</p>
-                        <p class="text-3xl font-bold text-yellow-500">
+                        <p class="text-3xl font-bold text-[#ff8c61]">
                             {{ $courses->sum(fn($c) => $c->students->where('pivot.status','pending')->count()) }}
                         </p>
                     </div>
 
-                    <div class="bg-white p-6 rounded shadow">
+                    <div class="bg-white p-6 rounded-xl shadow">
                         <p class="text-gray-500 text-sm">Approved Students</p>
                         <p class="text-3xl font-bold text-green-600">
                             {{ $courses->sum(fn($c) => $c->students->where('pivot.status','approved')->count()) }}
@@ -65,17 +67,17 @@
             {{-- ===== My Courses ===== --}}
 <section id="courses" class="dashboard-section hidden">
     <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-semibold text-gray-800">
+        <h2 class="text-xl font-semibold text-[#004d8c]">
             My Courses
         </h2>
 
         <button onclick="openAddCourseModal()"
-                class="px-4 py-2 bg-indigo-600 text-white rounded text-sm">
+                class="px-4 py-2 bg-[#ff8c61] text-white rounded-full text-sm font-bold shadow hover:bg-[#e67e56]">
             ➕ Add Course
         </button>
     </div>
 
-    <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
         <table class="w-full text-sm text-gray-700">
             <thead class="bg-gray-50 text-gray-600">
                 <tr>
@@ -104,18 +106,18 @@
                         </td>
 
                         <td class="px-4 py-3 text-center space-x-2">
-    <button
-        onclick="openStudentsModal({{ $course->id }})"
-        class="text-indigo-600 hover:underline text-sm">
-        👀 Students
-    </button>
+                            <button
+                                onclick="openStudentsModal({{ $course->id }})"
+                                class="text-[#004d8c] hover:underline text-sm font-semibold">
+                                👀 Students
+                            </button>
 
-    <button
-        onclick="openChatModal({{ $course->id }})"
-        class="text-green-600 hover:underline text-sm">
-        💬 Chat
-    </button>
-</td>
+                            <button
+                                onclick="openChatModal({{ $course->id }})"
+                                class="text-green-600 hover:underline text-sm font-semibold">
+                                💬 Chat
+                            </button>
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
@@ -125,12 +127,14 @@
 
             {{-- ===== Pending Requests ===== --}}
             <section id="pending" class="dashboard-section hidden">
-                <h2 class="text-2xl font-bold mb-4">Pending Requests</h2>
+                <h2 class="text-2xl font-bold mb-4 text-[#004d8c]">
+                    Pending Requests
+                </h2>
 
-                <div class="bg-white rounded shadow p-4 space-y-3">
+                <div class="bg-white rounded-xl shadow p-4 space-y-3">
                     @foreach($courses as $course)
                         @foreach($course->students->where('pivot.status','pending') as $student)
-                            <div class="flex justify-between items-center border p-3 rounded">
+                            <div class="flex justify-between items-center border p-3 rounded-lg">
                                 <div>
                                     <p class="font-semibold">{{ $student->name }}</p>
                                     <p class="text-sm text-gray-500">{{ $course->title }}</p>
@@ -141,7 +145,7 @@
                                           action="{{ route('teacher.requests.approve', [$course->id, $student->id]) }}"
                                           class="inline">
                                         @csrf
-                                        <button class="px-3 py-1 bg-green-600 text-white rounded">
+                                        <button class="px-3 py-1 bg-green-600 text-white rounded-full text-sm">
                                             Approve
                                         </button>
                                     </form>
@@ -150,7 +154,7 @@
                                           action="{{ route('teacher.requests.reject', [$course->id, $student->id]) }}"
                                           class="inline">
                                         @csrf
-                                        <button class="px-3 py-1 bg-red-600 text-white rounded">
+                                        <button class="px-3 py-1 bg-red-600 text-white rounded-full text-sm">
                                             Reject
                                         </button>
                                     </form>
@@ -163,13 +167,15 @@
 
             {{-- ===== Approved Students ===== --}}
             <section id="approved" class="dashboard-section hidden">
-                <h2 class="text-2xl font-bold mb-4">Approved Students</h2>
+                <h2 class="text-2xl font-bold mb-4 text-[#004d8c]">
+                    Approved Students
+                </h2>
 
-                <div class="bg-white rounded shadow p-4">
+                <div class="bg-white rounded-xl shadow p-4">
                     @foreach($courses as $course)
                         @foreach($course->students->where('pivot.status','approved') as $student)
                             <p class="border-b py-2">
-                                {{ $student->name }} – 
+                                {{ $student->name }} –
                                 <span class="text-gray-500">{{ $course->title }}</span>
                             </p>
                         @endforeach
@@ -179,8 +185,6 @@
 
         </main>
     </div>
-
-
 
     {{-- ================= JS ================= --}}
     <script>
@@ -198,19 +202,21 @@
             width: 100%;
             text-align: left;
             padding: 0.75rem;
-            border-radius: 0.5rem;
-            color: #374151;
-            font-weight: 500;
+            border-radius: 9999px;
+            color: white;
+            font-weight: 600;
+            transition: 0.2s;
         }
         .sidebar-btn:hover {
-            background-color: #f3f4f6;
+            background-color: rgba(255,255,255,0.15);
         }
     </style>
+
     {{-- ===== Students Modal ===== --}}
 <div id="studentsModal"
      class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
 
-    <div class="bg-white w-full max-w-lg rounded-lg shadow-lg p-6">
+    <div class="bg-white w-full max-w-lg rounded-xl shadow-lg p-6">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-semibold">Course Students</h3>
             <button onclick="closeStudentsModal()">✖</button>
@@ -226,7 +232,7 @@
 <div id="addCourseModal"
      class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
 
-    <div class="bg-white w-full max-w-lg rounded-lg shadow-lg p-6">
+    <div class="bg-white w-full max-w-lg rounded-xl shadow-lg p-6">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-semibold">Add New Course</h3>
             <button type="button" onclick="closeAddCourseModal()">✖</button>
@@ -261,13 +267,14 @@
                 </button>
 
                 <button type="submit"
-                        class="px-4 py-2 bg-indigo-600 text-white rounded text-sm">
+                        class="px-4 py-2 bg-[#ff8c61] text-white rounded-full text-sm font-bold">
                     Save
                 </button>
             </div>
         </form>
     </div>
 </div>
+
 
 {{-- ===== Chat Modal ===== --}}
 <div id="chatModal"
@@ -534,10 +541,10 @@ document.addEventListener('DOMContentLoaded', () => {
         .notification((notification) => {
             console.log('🔔 Notification received:', notification);
 
-            // مثال عرض
+           
             alert(notification.message);
 
-            // أو badge / toast لاحقًا
+           
         });
 });
 </script>

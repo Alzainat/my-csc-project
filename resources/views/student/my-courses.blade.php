@@ -1,41 +1,69 @@
 <x-app-layout>
 
-    {{-- ✅ HEADER لازم يكون أول شيء --}}
+    {{-- ✅ HEADER --}}
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">
+    <div class="flex justify-center">
+        <h2 class="text-5xl font-bold text-[#004d8c]">
             My Courses
         </h2>
-    </x-slot>
+    </div>
+</x-slot>
 
-    
+    {{-- ================= CONTENT ================= --}}
+    <div class="bg-[#f8f9fa] py-10 px-6">
 
-    {{-- ✅ العرض الحقيقي --}}
-    <div class="p-6">
-        @forelse($courses as $course)
-            <div class="border p-4 mb-4 rounded flex justify-between items-center">
-            <div>
-                <p class="font-semibold">{{ $course->title }}</p>
-                <p class="text-sm text-gray-600">
-                    Status: {{ ucfirst($course->pivot->status) }}
-                </p>
-            </div>
+        <div class="max-w-6xl mx-auto space-y-6">
 
-            {{-- ✅ الشات فقط إذا approved --}}
-            @if($course->pivot->status === 'approved')
-                <button
-                    onclick="openChatModal({{ $course->id }})"
-                    class="px-4 py-2 bg-indigo-600 text-white rounded text-sm">
-                    💬 Open Chat
-                </button>
-            @else
-                <span class="text-sm text-gray-400">
-                    Chat locked
-                </span>
-            @endif
+            @forelse($courses as $course)
+
+                <div
+                    class="bg-white rounded-2xl shadow-md p-6 flex flex-col md:flex-row
+                           md:items-center md:justify-between gap-4">
+
+                    {{-- Course Info --}}
+                    <div>
+                        <p class="text-xl font-bold text-[#1a1a1a]">
+                            {{ $course->title }}
+                        </p>
+
+                        <p class="mt-1 text-sm font-semibold
+                            {{ $course->pivot->status === 'approved'
+                                ? 'text-green-600'
+                                : 'text-[#ff8c61]' }}">
+                            Status:
+                            {{ ucfirst($course->pivot->status) }}
+                        </p>
+                    </div>
+
+                    {{-- Actions --}}
+                    <div>
+                        @if($course->pivot->status === 'approved')
+                            <button
+                                onclick="openChatModal({{ $course->id }})"
+                                class="px-6 py-2 rounded-full
+                                       bg-[#004d8c] text-white
+                                       font-bold text-sm
+                                       hover:bg-[#003b6f] transition">
+                                💬 Open Chat
+                            </button>
+                        @else
+                            <span
+                                class="px-6 py-2 rounded-full
+                                       bg-gray-100 text-gray-400
+                                       font-semibold text-sm">
+                                🔒 Chat Locked
+                            </span>
+                        @endif
+                    </div>
+                </div>
+
+            @empty
+                <div class="bg-white rounded-xl shadow p-10 text-center text-gray-400">
+                    No courses enrolled yet.
+                </div>
+            @endforelse
+
         </div>
-        @empty
-            <p>No courses</p>
-        @endforelse
     </div>
     {{-- ===== Chat Modal ===== --}}
 <div id="chatModal"
@@ -144,10 +172,9 @@ function sendChatMessage(e) {
     const message = input.value.trim();
     if (!message) return;
 
-    appendStudentMessage({
-        user: { name: 'You' },
-        message: message
-    });
+    appendMyMessage({
+    message: message
+});
 
     fetch(`/courses/${currentCourseId}/chat`, {
         method: 'POST',
@@ -159,6 +186,20 @@ function sendChatMessage(e) {
     }).then(() => {
         input.value = '';
     });
+}
+function appendMyMessage(msg) {
+    const box = document.getElementById('chatMessages');
+
+    box.innerHTML += `
+        <div class="text-right">
+            <p class="text-xs text-gray-500">You</p>
+            <span class="inline-block px-3 py-1 rounded bg-indigo-600 text-white">
+                ${msg.message}
+            </span>
+        </div>
+    `;
+
+    box.scrollTop = box.scrollHeight;
 }
 </script>
 

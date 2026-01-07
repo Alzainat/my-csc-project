@@ -18,3 +18,7 @@ Broadcast::channel('course.{courseId}', function ($user, $courseId) {
         ->wherePivot('status', 'approved')
         ->exists();
 });
+
+Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});
